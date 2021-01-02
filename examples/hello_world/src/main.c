@@ -1,4 +1,5 @@
 #include <tice.h>
+#include <stdlib.h>
 
 /* Main function, called first */
 int main(void)

@@ -1,38 +1,46 @@
-#----------------------------
-# Makefile
-#----------------------------
+# Copyright (C) 2015-2020
+#
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Lesser General Public
+# License as published by the Free Software Foundation; either
+# version 3 of the License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-# common/os specific things
-ifeq ($(OS),Windows_NT)
-SHELL      = cmd.exe
-NATIVEPATH = $(subst /,\,$(1))
-RMDIR      = call && (if exist $(1) rmdir /s /q $(1))
-MKDIR      = call && (if not exist $(1) mkdir $(1))
-RM         = del /f /q 2>nul
-CEDEV     ?= C:\CEdev
-BIN       ?= $(CEDEV)/bin
-else
-NATIVEPATH = $(subst \,/,$(1))
-RMDIR      = rm -rf $(1)
-MKDIR      = mkdir -p $(1)
-RM         = rm -f
-CEDEV     ?= $(HOME)/CEdev
-BIN       ?= $(CEDEV)/bin
-endif
-EZCC       = ez80-clang
+include $(CURDIR)/../../common.mk
 
-EZCFLAGS  := -S -Wall -Wextra -Oz -ffreestanding -isystem .. -isystem ../../fileioc -isystem ../../ce -Dinterrupt="__attribute__((__interrupt__))" -D__rom=const -Dreentrant= -D_EZ80
+BUILD_SRC := $(patsubst %,build/%.src,$(wildcard *.c *.cpp))
 
-EZC       := $(wildcard *.c)
-EZSRC     := $(addprefix build/,$(EZC:%.c=%.src))
+EZCFLAGS := -S -ffreestanding -Wall -Wextra -Oz
+EZCFLAGS += -D_EZ80 -isystem .. -isystem ../../ce
+EZCXXFLAGS := $(EZCFLAGS) -fno-exceptions -fno-rtti
+EZCXXFLAGS += -isystem ../c++
 
-all: $(EZSRC)
+WILDCARD_SRC = $(wildcard *.src) $(BUILD_SRC)
 
-build/%.src: %.c
-	@$(call MKDIR,build)
-	@$(EZCC) $(EZCFLAGS) $< -o $@
+all: $(BUILD_SRC)
+
+build/%.c.src: %.c
+	$(Q)$(call MKDIR,build)
+	$(Q)$(EZCC) $(EZCFLAGS) $< -o $@
+
+build/%.cpp.src: %.cpp
+	$(Q)$(call MKDIR,build)
+	$(Q)$(EZCC) $(EZCXXFLAGS) $< -o $@
 
 clean:
-	$(call RMDIR,build)
+	$(Q)$(call RMDIR,build)
+
+install: all
+	$(Q)$(call MKDIR,$(INSTALL_STATIC))
+	$(Q)$(call COPY,$(call NATIVEPATH,$(WILDCARD_SRC)),$(INSTALL_STATIC))
 
 .PHONY: all clean
+
